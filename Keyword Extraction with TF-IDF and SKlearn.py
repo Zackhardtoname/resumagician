@@ -1,59 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# ## Extracting Important Keywords from Text with TF-IDF and Python's Scikit-Learn 
-# 
-# Back in 2006, when I had to use TF-IDF for keyword extraction in Java, I ended up writing all of the code from scratch as Data Science nor GitHub were a thing back then and libraries were just limited. The world is much different today. You have several [libraries](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfTransformer.html#sklearn.feature_extraction.text.TfidfTransformer) and [open-source code on Github](https://github.com/topics/tf-idf?o=desc&s=forks) that provide a decent implementation of TF-IDF. If you don't need a lot of control over how the TF-IDF math is computed then I would highly recommend re-using libraries from known packages such as [Spark's MLLib](https://spark.apache.org/docs/2.2.0/mllib-feature-extraction.html) or [Python's scikit-learn](http://scikit-learn.org/stable/). 
-# 
-# The one problem that I noticed with these libraries is that they are meant as a pre-step for other tasks like clustering, topic modeling and text classification. [TF-IDF](https://en.wikipedia.org/wiki/Tf%E2%80%93idf) can actually be used to extract important keywords from a document to get a sense of what characterizes a document. For example, if you are dealing with wikipedia articles, you can use tf-idf to extract words that are unique to a given article. These keywords can be used as a very simple summary of the document, it can be used for text-analytics (when we look at these keywords in aggregate), as candidate labels for a document and more. 
-# 
-# In this article, I will show you how you can use scikit-learn to extract top keywords for a given document using its tf-idf modules. We will specifically do this on a stackoverflow dataset. 
-
-# ## Dataset
-# Since we used some pretty clean user reviews in some of my previous tutorials, in  this example, we will be using a Stackoverflow dataset which is slightly noisier and simulates what you could be dealing with in real life. You can find this dataset in [my tutorial repo](https://github.com/kavgan/data-science-tutorials/tree/master/tf-idf/data). Notice that there are two files, the larger file with (20,000 posts)[https://github.com/kavgan/data-science-tutorials/tree/master/tf-idf/data] is used to compute the Inverse Document Frequency (IDF) and the smaller file with [500 posts](https://github.com/kavgan/data-science-tutorials/tree/master/tf-idf/data) would be used as a test set for us to extract keywords from. This dataset is based on the publicly available [Stackoverflow dump on Google's Big Query](https://cloud.google.com/bigquery/public-data/stackoverflow).
-# 
-# Let's take a peek at our dataset. The code below reads a one per line json string from `data/stackoverflow-data-idf.json` into a pandas data frame and prints out its schema and total number of posts. Here, `lines=True` simply means we are treating each line in the text file as a separate json string. With this, the json in line 1 is not related to the json in line 2.
-
-# In[1]:
-
-
 import pandas as pd
+import pickle
+import helpers
 
-# read json into a dataframe
-df_idf=pd.read_json("data/stackoverflow-data-idf.json",lines=True)
-
-# print schema
-print("Schema:\n\n",df_idf.dtypes)
-print("Number of questions,columns=",df_idf.shape)
-
-
-# Take note that this stackoverflow dataset contains 19 fields including post title, body, tags, dates and other metadata which we don't quite need for this tutorial. What we are mostly interested in for this tutorial is the `body` and `title` which is our source of text. We will now create a field that combines both body and title so we have it in one field. We will also print the second `text` entry in our new field just to see what the text looks like.
-
-# In[2]:
-
-
-import re
-def pre_process(text):
-    
-    # lowercase
-    text=text.lower()
-    
-    #remove tags
-    text=re.sub("</?.*?>"," <> ",text)
-    
-    # remove special characters and digits
-    text=re.sub("(\\d|\\W)+"," ",text)
-    
-    return text
+df_idf = pd.read_json("data/stackoverflow-data-idf.json", lines=True)
 
 df_idf['text'] = df_idf['title'] + df_idf['body']
-df_idf['text'] = df_idf['text'].apply(lambda x:pre_process(x))
-
-#show the first 'text'
-df_idf['text'][2]
-
-
-# Hmm, doesn't look very pretty with all the html in there, but that's the point. Even in such a mess we can extract some great stuff out of this. While you can eliminate all code from the text, we will keep the code sections for this tutorial for the sake of simplicity.  
+df_idf['text'] = df_idf['text'].apply(lambda x: helpers.pre_process(x))
 
 # ## Creating the IDF
 # 
@@ -75,7 +29,7 @@ def get_stop_words(stop_file_path):
         return frozenset(stop_set)
 
 #load a set of stop words
-stopwords=get_stop_words("resources/stopwords.txt")
+stopwords = pickle.load(open('./resources/stopwords_set.plk', 'rb'))
 
 #get the text column 
 docs=df_idf['text'].tolist()
@@ -129,7 +83,7 @@ list(cv.get_feature_names())[2000:2015]
 
 from sklearn.feature_extraction.text import TfidfTransformer
 
-tfidf_transformer=TfidfTransformer(smooth_idf=True,use_idf=True)
+tfidf_transformer=TfidfTransformer(smooth_idf=True,use_idf=False)
 tfidf_transformer.fit(word_count_vector)
 
 
@@ -138,7 +92,7 @@ tfidf_transformer.fit(word_count_vector)
 # In[9]:
 
 
-tfidf_transformer.idf_
+# tfidf_transformer.idf_
 
 
 # ## Computing TF-IDF and Extracting Keywords
@@ -202,7 +156,190 @@ def extract_topn_from_vector(feature_names, sorted_items, topn=10):
 feature_names=cv.get_feature_names()
 
 # get the document that we want to extract keywords from
-doc=docs_test[0]
+# doc=docs_test[0]
+doc = """
+7/30/2019 Job Application for Software Engineer, Data (Intern/Co-op) at Robinhood
+https://boards.greenhouse.io/robinhood/jobs/1739582 1/5
+Software Engineer, Data (Intern/Co-op)
+at Robinhood (View all jobs)
+Menlo Park, CA
+About the company
+Robinhood is democratizing our financial system. We offer commission-free investing in stocks, ETFs,
+options, and cryptocurrencies. Robinhood Financial, our broker-dealer, is a fast-growing brokerage with
+millions of users and billions of dollars in transaction volume. Robinhood has received the Apple Design
+Award (2015), the Google Play Award for Best Use of Material Design (2016), and was named Fast
+Company’s 11th Most Innovative Company in the world (2016). We’re backed with $539 million in capital
+from top-tier investors such as DST Global, NEA, Index Ventures, Thrive Capital, Sequoia, and KPCB,
+and were most recently valued at $5.6 billion. Robinhood is based in Menlo Park, California, and Lake
+Mary, Florida.
+About the role
+Software engineers on the Data team are the central node to every team within Robinhood. You’ll be
+interfacing with UX researchers to gain insight, Ops engineers to ensure successful deployments, and
+Data Scientists to advance our product by utilizing machine intelligence. The Data team consists of
+functions including Data Platform (e.g. our compute infrastructure), Data Products (e.g. newsfeed),
+Growth and Marketing (e.g. optimizing top of funnel growth), and Risk and Fraud (e.g. real-time risk
+mitigation systems).
+Every decision made at Robinhood is backed by data; our company trajectory is defined by the systems,
+tools, and analytics powered by our exceptional team. We integrate multifaceted data streams such as
+rapidly changing market data, user data based on app activity, and brokerage operations data to perfect
+our processes and workflows.
+In this role you will:
+Have a dedicated mentor who will review your code and help you get ramped up.
+Productionize machine learning algorithms, augment data scientists to make the Robinhood
+products smarter.
+Build scalable APIs in a microservice ecosystem.
+Build robust distributed systems to process large scale data streams into useful applications.
+Engineer fast, real-time data pipelines to process data from across the financial markets and our
+internal event streams.
+Implement risk monitoring systems to improve tracking and mitigation of several risks including
+money laundering, financial fraud and margin exposure.
+Work closely with data scientists and collaborate with back-end and front-end engineers to build
+products for gathering timely insights about customer behavior, etc.
+Some things we consider critical for this role:
+Strong CS fundamentals
+Desire to own product development from end-to-end, including research, design, and
+implementation.
+Comfortable and excited to work with distributed systems and data at scale.
+Some things that would be amazing to have for this role:
+Previous software engineering experience from internships, hackathons, or side projects.
+Familiarity with Python, Golang, data systems.
+Technologies we use:
+Airflow
+Celery (written by our very own Ask Solem)
+Faust
+Elasticsearch, Logstash, Kibana (ELK)
+Kafka
+Apply Now
+7/30/2019 Job Application for Software Engineer, Data (Intern/Co-op) at Robinhood
+https://boards.greenhouse.io/robinhood/jobs/1739582 2/5
+Apply for this Job * Required
+Redis
+Presto
+Spark
+Hive
+Redshift and AWS Suite
+Zookeeper
+Consul
+Note to Recruiters and Placement Agencies: Robinhood does not accept unsolicited agency
+resumes. Robinhood does not pay placement fees for candidates submitted by any agency other than
+its approved partners.
+First Name *
+Last Name *
+Email *
+Phone *
+Resume/CV *
+Cover Letter
+Your full LinkedIn profile
+will be shared. Learn More
+Apply with LinkedIn
+7/30/2019 Job Application for Software Engineer, Data (Intern/Co-op) at Robinhood
+https://boards.greenhouse.io/robinhood/jobs/1739582 3/5
+LinkedIn Profile *
+Website
+How did you hear about this job?
+Work Authorization *
+Please select
+Have you used Robinhood? *
+--
+U.S. Equal Opportunity Employment Information (Completion is voluntary)
+Individuals seeking employment at Robinhood are considered without regards to race, color,
+religion, national origin, age, sex, marital status, ancestry, physical or mental disability,
+veteran status, gender identity, or sexual orientation. You are being given the opportunity to
+provide the following information in order to help us comply with federal and state Equal
+Employment Opportunity/Affirmative Action record keeping, reporting, and other legal
+requirements.
+Completion of the form is entirely voluntary. Whatever your decision, it will not be considered
+in the hiring process or thereafter. Any information that you do provide will be recorded and
+maintained in a confidential file.
+Gender
+Please select
+Are you Hispanic/Latino?
+7/30/2019 Job Application for Software Engineer, Data (Intern/Co-op) at Robinhood
+https://boards.greenhouse.io/robinhood/jobs/1739582 4/5
+Please select
+Race & Ethnicity Definitions
+If you believe you belong to any of the categories of protected veterans listed below, please
+indicate by making the appropriate selection. As a government contractor subject to Vietnam
+Era Veterans Readjustment Assistance Act (VEVRAA), we request this information in order to
+measure the effectiveness of the outreach and positive recruitment efforts we undertake
+pursuant to VEVRAA. Classification of protected categories is as follows:
+A "disabled veteran" is one of the following: a veteran of the U.S. military, ground, naval or air
+service who is entitled to compensation (or who but for the receipt of military retired pay would
+be entitled to compensation) under laws administered by the Secretary of Veterans Affairs; or
+a person who was discharged or released from active duty because of a service-connected
+disability.
+A "recently separated veteran" means any veteran during the three-year period beginning on
+the date of such veteran's discharge or release from active duty in the U.S. military, ground,
+naval, or air service.
+An "active duty wartime or campaign badge veteran" means a veteran who served on active
+duty in the U.S. military, ground, naval or air service during a war, or in a campaign or
+expedition for which a campaign badge has been authorized under the laws administered by
+the Department of Defense.
+An "Armed forces service medal veteran" means a veteran who, while serving on active duty
+in the U.S. military, ground, naval or air service, participated in a United States military
+operation for which an Armed Forces service medal was awarded pursuant to Executive
+Order 12985.
+Veteran Status
+Please select
+Form CC-305
+OMB Control Number 1250-0005
+Expires 1/31/2020
+Voluntary Self-Identification of Disability
+Why are you being asked to complete this form?
+Because we do business with the government, we must reach out to, hire, and provide equal
+opportunity to qualified people with disabilities1. To help us measure how well we are doing,
+we are asking you to tell us if you have a disability or if you ever had a disability. Completing
+this form is voluntary, but we hope that you will choose to fill it out. If you are applying for a
+job, any answer you give will be kept private and will not be used against you in any way.
+If you already work for us, your answer will not be used against you in any way. Because a
+person may become disabled at any time, we are required to ask all of our employees to
+update their information every five years. You may voluntarily self-identify as having a
+disability on this form without fear of any punishment because you did not identify as having a
+disability earlier.
+How do I know if I have a disability?
+You are considered to have a disability if you have a physical or mental impairment or medical
+condition that substantially limits a major life activity, or if you have a history or record of such
+an impairment or medical condition.
+Disabilities include, but are not limited to:
+7/30/2019 Job Application for Software Engineer, Data (Intern/Co-op) at Robinhood
+https://boards.greenhouse.io/robinhood/jobs/1739582 5/5
+Blindness
+Deafness
+Cancer
+Diabetes
+Epilepsy
+Autism
+Cerebral palsy
+HIV/AIDS
+Schizophrenia
+Muscular dystrophy
+Bipolar disorder
+Major depression
+Multiple sclerosis (MS)
+Missing limbs or partially missing limbs
+Post-traumatic stress disorder (PTSD)
+Obsessive compulsive disorder
+Impairments requiring the use of a wheelchair
+Intellectual disability (previously called mental retardation)
+Disability Status
+Please select
+Reasonable Accommodation Notice
+Federal law requires employers to provide reasonable accommodation to qualified individuals
+with disabilities. Please tell us if you require a reasonable accommodation to apply for a job or
+to perform your job. Examples of reasonable accommodation include making a change to the
+application process or work procedures, providing documents in an alternate format, using a
+sign language interpreter, or using specialized equipment.
+1Section 503 of the Rehabilitation Act of 1973, as amended. For more information about this
+form or the equal employment obligations of Federal contractors, visit the U.S. Department of
+Labor's Office of Federal Contract Compliance Programs (OFCCP) website at
+www.dol.gov/ofccp.
+PUBLIC BURDEN STATEMENT: According to the Paperwork Reduction Act of 1995 no
+persons are required to respond to a collection of information unless such collection displays
+a valid OMB control number. This survey should take about 5 minutes to complete.
+Suubbmiitt Apppplliiccaattiioonn
+Powered by
+Read our Privacy Policy
+"""
 
 #generate tf-idf for the given document
 tf_idf_vector=tfidf_transformer.transform(cv.transform([doc]))
@@ -223,47 +360,47 @@ for k in keywords:
     print(k,keywords[k])
 
 
-# From the keywords above, the top keywords actually make sense, it talks about `eclipse`, `maven`, `integrate`, `war` and `tomcat` which are all unique to this specific question. There are a couple of kewyords that could have been eliminated such as `possibility` and perhaps even `project` and you can do this by adding more common words to your stop list and you can even create your own set of stop list, very specific to your domain as [described here](http://kavita-ganesan.com/tips-for-constructing-custom-stop-word-lists/).
-# 
-# 
-
-# In[13]:
-
-
-# put the common code into several methods
-def get_keywords(idx):
-
-    #generate tf-idf for the given document
-    tf_idf_vector=tfidf_transformer.transform(cv.transform([docs_test[idx]]))
-
-    #sort the tf-idf vectors by descending order of scores
-    sorted_items=sort_coo(tf_idf_vector.tocoo())
-
-    #extract only the top n; n here is 10
-    keywords=extract_topn_from_vector(feature_names,sorted_items,10)
-    
-    return keywords
-
-def print_results(idx,keywords):
-    # now print the results
-    print("\n=====Title=====")
-    print(docs_title[idx])
-    print("\n=====Body=====")
-    print(docs_body[idx])
-    print("\n===Keywords===")
-    for k in keywords:
-        print(k,keywords[k])
-
-
-# Now let's look at keywords generated for a much longer question: 
-# 
-
-# In[14]:
-
-
-idx=120
-keywords=get_keywords(idx)
-print_results(idx,keywords)
-
-
-# Whoala! Now you can extract important keywords from any type of text! 
+# # From the keywords above, the top keywords actually make sense, it talks about `eclipse`, `maven`, `integrate`, `war` and `tomcat` which are all unique to this specific question. There are a couple of kewyords that could have been eliminated such as `possibility` and perhaps even `project` and you can do this by adding more common words to your stop list and you can even create your own set of stop list, very specific to your domain as [described here](http://kavita-ganesan.com/tips-for-constructing-custom-stop-word-lists/).
+# #
+# #
+#
+# # In[13]:
+#
+#
+# # put the common code into several methods
+# def get_keywords(idx):
+#
+#     #generate tf-idf for the given document
+#     tf_idf_vector=tfidf_transformer.transform(cv.transform([docs_test[idx]]))
+#
+#     #sort the tf-idf vectors by descending order of scores
+#     sorted_items=sort_coo(tf_idf_vector.tocoo())
+#
+#     #extract only the top n; n here is 10
+#     keywords=extract_topn_from_vector(feature_names,sorted_items,10)
+#
+#     return keywords
+#
+# def print_results(idx,keywords):
+#     # now print the results
+#     print("\n=====Title=====")
+#     print(docs_title[idx])
+#     print("\n=====Body=====")
+#     print(docs_body[idx])
+#     print("\n===Keywords===")
+#     for k in keywords:
+#         print(k,keywords[k])
+#
+#
+# # Now let's look at keywords generated for a much longer question:
+# #
+#
+# # In[14]:
+#
+#
+# idx=120
+# keywords=get_keywords(idx)
+# print_results(idx,keywords)
+#
+#
+# # Whoala! Now you can extract important keywords from any type of text!

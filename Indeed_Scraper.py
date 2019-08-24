@@ -239,4 +239,4 @@ if __name__ == "__main__":
 
     # get_data(query, num_pages, location='United States')
 
-    get_data("data scientist", 2, location='United States')
+    get_data("data scientist", 20, location='United States')

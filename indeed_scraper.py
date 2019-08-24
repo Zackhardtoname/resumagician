@@ -209,7 +209,7 @@ def get_data(query, num_pages, location='San Francisco'):
         # Save the dict as json file
         file_name = query.replace('+', '_') + '.json'
         with open(file_name, 'w') as f:
-            json.dump(postings_dict, f)
+            json.dump(postings_dict, f, indent=2)
 
         print('All {} postings have been scraped and saved!'.format(num_urls))
         # return postings_dict

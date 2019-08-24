@@ -14,7 +14,7 @@ def get_soup(url):
     Returns:
         soup: soup object
     """
-    chrome_driver = "./bin/chromedriver"
+    chrome_driver = "bin/chromedriver"
     chrome_options = Options()
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--headless")
@@ -140,7 +140,7 @@ def get_posting(url):
 
     # The job title is held in the h3 tag
     title = soup.find(name='h3').getText().lower()
-    posting = soup.find(name='div', attrs={'class': "jobsearch-JobComponent-description"}).get_text()
+    posting = soup.find(name='div', attrs={'class': "jobsearch-JobComponent-description"}).get_text(separator=' ')
 
     # break into lines and remove leading and trailing space on each
     lines = (line.strip() for line in posting.splitlines())
@@ -238,4 +238,4 @@ if __name__ == "__main__":
 
     # get_data(query, num_pages, location='United States')
 
-    get_data("software engineer", 20, location='United States')
+    get_data("software engineer", 1, location='United States')

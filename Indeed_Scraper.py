@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
-
 def get_soup(url):
     """
     Given the url of a page, this function returns the soup object.
@@ -15,7 +14,7 @@ def get_soup(url):
     Returns:
         soup: soup object
     """
-    chrome_driver = "bin/chromedriver"
+    chrome_driver = "./bin/chromedriver"
     chrome_options = Options()
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--headless")
@@ -239,4 +238,4 @@ if __name__ == "__main__":
 
     # get_data(query, num_pages, location='United States')
 
-    get_data("data scientist", 2, location='United States')
+    get_data("software engineer", 20, location='United States')

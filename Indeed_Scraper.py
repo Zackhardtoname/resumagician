@@ -15,7 +15,7 @@ def get_soup(url):
     Returns:
         soup: soup object
     """
-    chrome_driver = "/Users/Even/Desktop/JobScrapper/venv/bin/chromedriver"
+    chrome_driver = "bin/chromedriver"
     chrome_options = Options()
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--headless")

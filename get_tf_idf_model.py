@@ -5,8 +5,8 @@ import json
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 
-exclude_percentage = .85
-max_vocab = 10000
+exclude_percentage = .05
+max_vocab = 20000
 file_path = "data/software_engineer.json"
 
 with open(file_path) as json_file:
